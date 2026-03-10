@@ -5,17 +5,8 @@ import chalk from "chalk";
 import { Command, Help } from "commander";
 import { brand, muted, setQuiet } from "./output.ts";
 
-// Handle --version --json before Commander processes the flag
-const rawArgs = process.argv.slice(2);
-if ((rawArgs.includes("-v") || rawArgs.includes("--version")) && rawArgs.includes("--json")) {
-	const platform = `${process.platform}-${process.arch}`;
-	console.log(
-		JSON.stringify({ name: "@os-eco/seeds-cli", version: VERSION, runtime: "bun", platform }),
-	);
-	process.exit();
-}
-
 // Apply quiet mode early so it affects all output during command execution
+const rawArgs = process.argv.slice(2);
 if (rawArgs.includes("--quiet") || rawArgs.includes("-q")) {
 	setQuiet(true);
 }
@@ -134,6 +125,16 @@ function levenshtein(a: string, b: string): number {
 }
 
 async function main(): Promise<void> {
+	// Handle --version --json before Commander processes the flag
+	if ((rawArgs.includes("-v") || rawArgs.includes("--version")) && rawArgs.includes("--json")) {
+		const platform = `${process.platform}-${process.arch}`;
+		console.log(
+			JSON.stringify({ name: "@os-eco/seeds-cli", version: VERSION, runtime: "bun", platform }),
+		);
+		process.exitCode = 0;
+		return;
+	}
+
 	await registerAll();
 
 	// Check for unknown commands before parsing
