@@ -78,7 +78,9 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 			? flags.description
 			: typeof flags.desc === "string"
 				? flags.desc
-				: undefined;
+				: typeof flags.body === "string"
+					? flags.body
+					: undefined;
 
 	const dir = seedsDir ?? (await findSeedsDir());
 	const config = await readConfig(dir);
@@ -122,6 +124,7 @@ export function register(program: Command): void {
 		.option("--assignee <name>", "Assignee name")
 		.option("--description <text>", "Issue description")
 		.option("--desc <text>", "Issue description (alias for --description)")
+		.option("--body <text>", "Issue description (alias for --description)")
 		.option("--labels <labels>", "Comma-separated labels")
 		.option("--json", "Output as JSON")
 		.action(
@@ -132,6 +135,7 @@ export function register(program: Command): void {
 				assignee?: string;
 				description?: string;
 				desc?: string;
+				body?: string;
 				labels?: string;
 				json?: boolean;
 			}) => {
@@ -141,6 +145,7 @@ export function register(program: Command): void {
 				if (opts.assignee) args.push("--assignee", opts.assignee);
 				if (opts.description) args.push("--description", opts.description);
 				if (opts.desc) args.push("--desc", opts.desc);
+				if (opts.body) args.push("--body", opts.body);
 				if (opts.labels) args.push("--labels", opts.labels);
 				if (opts.json) args.push("--json");
 				await run(args);

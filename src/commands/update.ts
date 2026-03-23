@@ -70,7 +70,12 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		}
 		if (typeof flags.title === "string") patch.title = flags.title;
 		if (typeof flags.assignee === "string") patch.assignee = flags.assignee;
-		const desc = typeof flags.description === "string" ? flags.description : flags.desc;
+		const desc =
+			typeof flags.description === "string"
+				? flags.description
+				: typeof flags.desc === "string"
+					? flags.desc
+					: flags.body;
 		if (typeof desc === "string") patch.description = desc;
 		if (typeof flags.type === "string") {
 			const t = flags.type;
@@ -134,6 +139,7 @@ export function register(program: Command): void {
 		.option("--assignee <name>", "New assignee")
 		.option("--description <text>", "New description")
 		.option("--desc <text>", "New description (alias for --description)")
+		.option("--body <text>", "New description (alias for --description)")
 		.option("--type <type>", "New type (task|bug|feature|epic)")
 		.option("--priority <n>", "New priority 0-4 or P0-P4")
 		.option("--add-label <labels>", "Add label(s) (comma-separated)")
@@ -149,6 +155,7 @@ export function register(program: Command): void {
 					assignee?: string;
 					description?: string;
 					desc?: string;
+					body?: string;
 					type?: string;
 					priority?: string;
 					addLabel?: string;
@@ -163,6 +170,7 @@ export function register(program: Command): void {
 				if (opts.assignee) args.push("--assignee", opts.assignee);
 				if (opts.description) args.push("--description", opts.description);
 				if (opts.desc) args.push("--desc", opts.desc);
+				if (opts.body) args.push("--body", opts.body);
 				if (opts.type) args.push("--type", opts.type);
 				if (opts.priority) args.push("--priority", opts.priority);
 				if (opts.addLabel) args.push("--add-label", opts.addLabel);
