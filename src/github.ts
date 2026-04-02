@@ -55,22 +55,18 @@ export async function ghCreate(
 	repo: string,
 ): Promise<number | null> {
 	try {
+		const body = [
+			issue.description || "",
+			"",
+			`_Seeds ID: \`${issue.id}\` | Type: ${issue.type} | Priority: ${issue.priority}_`,
+		].join("\n");
+
 		const args = [
 			"gh", "issue", "create",
 			"--repo", repo,
 			"--title", issue.title,
-			"--body", issue.description || `Seeds issue: ${issue.id}`,
+			"--body", body,
 		];
-
-		// Add labels
-		const labels: string[] = [];
-		if (issue.type) labels.push(`type:${issue.type}`);
-		if (issue.priority !== undefined) labels.push(`priority:${issue.priority}`);
-		if (issue.labels) labels.push(...issue.labels);
-		if (labels.length > 0) {
-			// Create labels if they don't exist (gh handles this gracefully)
-			args.push("--label", labels.join(","));
-		}
 
 		const proc = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
 		const output = await new Response(proc.stdout).text();

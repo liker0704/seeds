@@ -11,6 +11,9 @@ export async function readConfig(seedsDir: string): Promise<Config> {
 	return {
 		project: data.project ?? "seeds",
 		version: data.version ?? "1",
+		...(data.github_enabled !== undefined ? { github_enabled: data.github_enabled === "true" || data.github_enabled === true } : {}),
+		...(data.github_repo ? { github_repo: String(data.github_repo) } : {}),
+		...(data.github_sync_on_write !== undefined ? { github_sync_on_write: data.github_sync_on_write === "true" || data.github_sync_on_write === true } : {}),
 	};
 }
 

@@ -30,18 +30,15 @@ export interface Template {
 	steps: TemplateStep[];
 }
 
-export interface GitHubMirrorConfig {
-	enabled: boolean;
-	/** GitHub repo in "owner/name" format. Auto-detected from git remote if omitted. */
-	repo?: string;
-	/** Sync to GitHub immediately on create/close/update. Default: true. */
-	syncOnWrite?: boolean;
-}
-
 export interface Config {
 	project: string;
 	version: string;
-	github?: GitHubMirrorConfig;
+	/** Enable GitHub issue mirroring. */
+	github_enabled?: boolean;
+	/** GitHub repo in "owner/name" format. Auto-detected from git remote if omitted. */
+	github_repo?: string;
+	/** Sync to GitHub immediately on create/close/update. Default: true. */
+	github_sync_on_write?: boolean;
 }
 
 export interface ConvoyStatus {

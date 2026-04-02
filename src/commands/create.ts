@@ -107,11 +107,11 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		createdId = id;
 
 		// GitHub mirror: create issue on GitHub if enabled
-		if (config.github?.enabled !== false && config.github?.syncOnWrite !== false) {
+		if (config.github_enabled && config.github_sync_on_write !== false) {
 			try {
-				const { ghCreate, resolveRepo, ghIsAvailable } = await import("../github.ts");
+				const { ghCreate, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
 				if (await ghIsAvailable()) {
-					const repo = await resolveRepo(config, process.cwd());
+					const repo = config.github_repo ?? await detectGitHubRepo(process.cwd());
 					if (repo) {
 						const ghNumber = await ghCreate(issue, repo);
 						if (ghNumber) {
