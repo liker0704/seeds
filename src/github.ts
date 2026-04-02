@@ -58,7 +58,7 @@ export async function ghCreate(
 		const body = [
 			issue.description || "",
 			"",
-			`_Seeds ID: \`${issue.id}\` | Type: ${issue.type} | Priority: ${issue.priority}_`,
+			`_Seeds ID: \`${issue.id}\`_`,
 		].join("\n");
 
 		const args = [
@@ -67,6 +67,14 @@ export async function ghCreate(
 			"--title", issue.title,
 			"--body", body,
 		];
+
+		// Add labels if they exist (created by sd init --github)
+		const labels: string[] = [];
+		if (issue.type) labels.push(`type:${issue.type}`);
+		if (issue.priority !== undefined) labels.push(`priority:${issue.priority}`);
+		if (labels.length > 0) {
+			args.push("--label", labels.join(","));
+		}
 
 		const proc = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
 		const output = await new Response(proc.stdout).text();
