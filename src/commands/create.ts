@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import { findSeedsDir, readConfig } from "../config.ts";
 import { generateId } from "../id.ts";
 import { outputJson, printSuccess } from "../output.ts";
-import { appendIssue, issuesPath, readIssues, withLock } from "../store.ts";
+import { appendIssue, issuesPath, readIssues, withLock, writeIssues } from "../store.ts";
 import type { Issue } from "../types.ts";
 import { VALID_TYPES } from "../types.ts";
 
@@ -105,6 +105,31 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		};
 		await appendIssue(dir, issue);
 		createdId = id;
+
+		// GitHub mirror: create issue on GitHub if enabled
+		if (config.github?.enabled !== false && config.github?.syncOnWrite !== false) {
+			try {
+				const { ghCreate, resolveRepo, ghIsAvailable } = await import("../github.ts");
+				if (await ghIsAvailable()) {
+					const repo = await resolveRepo(config, process.cwd());
+					if (repo) {
+						const ghNumber = await ghCreate(issue, repo);
+						if (ghNumber) {
+							issue.githubNumber = ghNumber;
+							// Re-read and update the issue with githubNumber
+							const issues = await readIssues(dir);
+							const idx = issues.findIndex((i) => i.id === id);
+							if (idx >= 0) {
+								issues[idx] = { ...issues[idx]!, githubNumber: ghNumber };
+								await writeIssues(dir, issues);
+							}
+						}
+					}
+				}
+			} catch {
+				// Non-fatal: GitHub sync failure doesn't block local create
+			}
+		}
 	});
 
 	if (jsonMode) {

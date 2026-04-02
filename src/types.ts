@@ -14,6 +14,8 @@ export interface Issue {
 	createdAt: string;
 	updatedAt: string;
 	closedAt?: string;
+	/** GitHub issue number for bidirectional sync. Set automatically when github.enabled. */
+	githubNumber?: number;
 }
 
 export interface TemplateStep {
@@ -28,9 +30,18 @@ export interface Template {
 	steps: TemplateStep[];
 }
 
+export interface GitHubMirrorConfig {
+	enabled: boolean;
+	/** GitHub repo in "owner/name" format. Auto-detected from git remote if omitted. */
+	repo?: string;
+	/** Sync to GitHub immediately on create/close/update. Default: true. */
+	syncOnWrite?: boolean;
+}
+
 export interface Config {
 	project: string;
 	version: string;
+	github?: GitHubMirrorConfig;
 }
 
 export interface ConvoyStatus {

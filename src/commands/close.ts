@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { findSeedsDir } from "../config.ts";
+import { findSeedsDir, readConfig } from "../config.ts";
 import { outputJson, printSuccess } from "../output.ts";
 import { issuesPath, readIssues, withLock, writeIssues } from "../store.ts";
 import type { Issue } from "../types.ts";
@@ -83,6 +83,27 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 			}
 		}
 		await writeIssues(dir, issues);
+
+		// GitHub mirror: close issues on GitHub if enabled
+		try {
+			const config = await readConfig(dir);
+			if (config.github?.enabled !== false && config.github?.syncOnWrite !== false) {
+				const { ghClose, resolveRepo, ghIsAvailable } = await import("../github.ts");
+				if (await ghIsAvailable()) {
+					const repo = await resolveRepo(config, process.cwd());
+					if (repo) {
+						for (const id of closed) {
+							const issue = issues.find((i) => i.id === id);
+							if (issue?.githubNumber) {
+								await ghClose(issue.githubNumber, repo, reason);
+							}
+						}
+					}
+				}
+			}
+		} catch {
+			// Non-fatal: GitHub sync failure doesn't block local close
+		}
 	});
 
 	if (jsonMode) {
