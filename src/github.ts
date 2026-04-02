@@ -206,12 +206,12 @@ export async function ghUpdate(
 export async function ghList(
 	repo: string,
 	opts?: { state?: "open" | "closed" | "all"; limit?: number },
-): Promise<Array<{ number: number; title: string; state: string; labels: string[] }>> {
+): Promise<Array<{ number: number; title: string; state: string; labels: string[]; body: string }>> {
 	try {
 		const args = [
 			"gh", "issue", "list",
 			"--repo", repo,
-			"--json", "number,title,state,labels",
+			"--json", "number,title,state,labels,body",
 			"--limit", String(opts?.limit ?? 100),
 		];
 		if (opts?.state) args.push("--state", opts.state);
@@ -226,6 +226,7 @@ export async function ghList(
 			number: number;
 			title: string;
 			state: string;
+			body: string;
 			labels: Array<{ name: string }>;
 		}>;
 
@@ -234,6 +235,7 @@ export async function ghList(
 			title: i.title,
 			state: i.state,
 			labels: i.labels.map((l) => l.name),
+			body: i.body ?? "",
 		}));
 	} catch {
 		return [];

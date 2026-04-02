@@ -45,6 +45,37 @@ async function syncFromGitHub(dir: string, jsonMode: boolean): Promise<{ pulled:
 		// Get all GitHub issues (open + closed)
 		const ghIssues = await ghList(repo, { state: "all", limit: 200 });
 
+		// Auto-discover: link sd issues that don't have githubNumber yet
+		// Match by Seeds ID in GitHub issue body (`Seeds ID: \`overstory-xxxx\``)
+		for (const ghIssue of ghIssues) {
+			// Skip if already linked to an sd issue
+			if (issues.some((i) => i.githubNumber === ghIssue.number)) continue;
+
+			// Try to find Seeds ID in body
+			const seedsIdMatch = ghIssue.body.match(/Seeds ID: `([^`]+)`/);
+			if (seedsIdMatch?.[1]) {
+				const sdId = seedsIdMatch[1];
+				const idx = issues.findIndex((i) => i.id === sdId && !i.githubNumber);
+				if (idx >= 0) {
+					issues[idx] = { ...issues[idx]!, githubNumber: ghIssue.number, updatedAt: new Date().toISOString() };
+					changed = true;
+					pulled++;
+					if (!jsonMode) printSuccess(`Linked: ${sdId} ↔ gh #${ghIssue.number}`);
+				}
+			} else {
+				// Fallback: match by exact title
+				const idx = issues.findIndex(
+					(i) => i.title === ghIssue.title && !i.githubNumber,
+				);
+				if (idx >= 0) {
+					issues[idx] = { ...issues[idx]!, githubNumber: ghIssue.number, updatedAt: new Date().toISOString() };
+					changed = true;
+					pulled++;
+					if (!jsonMode) printSuccess(`Linked (by title): ${issues[idx]!.id} ↔ gh #${ghIssue.number}`);
+				}
+			}
+		}
+
 		for (const ghIssue of ghIssues) {
 			const sdIssue = issues.find((i) => i.githubNumber === ghIssue.number);
 			if (!sdIssue) continue;
