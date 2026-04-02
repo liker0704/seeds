@@ -1,3 +1,11 @@
+export interface IssueComment {
+	body: string;
+	author: string;
+	createdAt: string;
+	/** GitHub comment ID for sync. */
+	githubId?: number;
+}
+
 export interface Issue {
 	id: string;
 	title: string;
@@ -11,6 +19,7 @@ export interface Issue {
 	blockedBy?: string[];
 	labels?: string[];
 	convoy?: string;
+	comments?: IssueComment[];
 	createdAt: string;
 	updatedAt: string;
 	closedAt?: string;

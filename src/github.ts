@@ -240,6 +240,37 @@ export async function ghList(
 	}
 }
 
+/** List comments on a GitHub issue. */
+export async function ghListComments(
+	githubNumber: number,
+	repo: string,
+): Promise<Array<{ id: number; body: string; author: string; createdAt: string }>> {
+	try {
+		const proc = Bun.spawn(
+			[
+				"gh", "api",
+				`repos/${repo}/issues/${githubNumber}/comments`,
+				"--jq", ".[] | {id: .id, body: .body, author: .user.login, createdAt: .created_at}",
+			],
+			{ stdout: "pipe", stderr: "pipe" },
+		);
+		const output = await new Response(proc.stdout).text();
+		const code = await proc.exited;
+		if (code !== 0) return [];
+
+		return output
+			.trim()
+			.split("\n")
+			.filter((l) => l.length > 0)
+			.map((line) => {
+				const parsed = JSON.parse(line) as { id: number; body: string; author: string; createdAt: string };
+				return parsed;
+			});
+	} catch {
+		return [];
+	}
+}
+
 /** Reopen a GitHub issue. */
 export async function ghReopen(
 	githubNumber: number,
