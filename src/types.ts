@@ -1,6 +1,6 @@
 export interface IssueComment {
 	body: string;
-	author: string;
+	author?: string;
 	createdAt: string;
 	/** GitHub comment ID for sync. */
 	githubId?: number;

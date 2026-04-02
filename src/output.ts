@@ -76,7 +76,11 @@ export function printIssueFull(issue: Issue): void {
 		console.log(`\n${muted("--- Comments ---")}`);
 		for (const c of issue.comments) {
 			const ts = new Date(c.createdAt).toLocaleString();
-			console.log(`  ${accent(c.author)} ${muted(`(${ts})`)}:`);
+			if (c.author) {
+				console.log(`  ${accent(c.author)} ${muted(`(${ts})`)}:`);
+			} else {
+				console.log(`  ${muted(`(${ts})`)}:`);
+			}
 			console.log(`    ${c.body}`);
 		}
 	}

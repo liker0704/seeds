@@ -44,7 +44,7 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 
 	const id = positional[0];
 	const body = positional[1] ?? (typeof flags.body === "string" ? flags.body : undefined);
-	const author = typeof flags.author === "string" ? flags.author : "operator";
+	const author = typeof flags.author === "string" ? flags.author : undefined;
 
 	if (!id) throw new Error("Usage: sd comment <id> <body> [--author name] [--json]");
 	if (!body) throw new Error("Usage: sd comment <id> <body> [--author name] [--json]");
@@ -59,7 +59,7 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		const issue = issues[idx]!;
 		const comment: IssueComment = {
 			body,
-			author,
+			...(author ? { author } : {}),
 			createdAt: new Date().toISOString(),
 		};
 
@@ -75,7 +75,7 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 				if (await ghIsAvailable()) {
 					const repo = config.github_repo ?? (await detectGitHubRepo(process.cwd()));
 					if (repo) {
-						const ghBody = `**${author}:** ${body}`;
+						const ghBody = author ? `**${author}:** ${body}` : body;
 						const proc = Bun.spawn(
 							[
 								"gh",
