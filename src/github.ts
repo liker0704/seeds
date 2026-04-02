@@ -45,21 +45,93 @@ export async function detectGitHubRepo(cwd: string): Promise<string | null> {
 
 /** Resolve the GitHub repo to use. Config > auto-detect. */
 export async function resolveRepo(config: Config, cwd: string): Promise<string | null> {
-	if (config.github?.repo) return config.github.repo;
+	if (config.github_repo) return config.github_repo;
 	return detectGitHubRepo(cwd);
+}
+
+/**
+ * Build the <!-- seeds:deps --> section for a GitHub issue body.
+ * Resolves blocks/blockedBy sd IDs to GitHub issue numbers and titles.
+ */
+export function buildDepsSection(
+	issue: Issue,
+	allIssues: Issue[],
+	repo: string,
+): string {
+	const blocks = issue.blocks ?? [];
+	const blockedBy = issue.blockedBy ?? [];
+	if (blocks.length === 0 && blockedBy.length === 0) return "";
+
+	const resolveLink = (sdId: string): string => {
+		const dep = allIssues.find((i) => i.id === sdId);
+		if (dep?.githubNumber) {
+			return `[${dep.title} (#${dep.githubNumber})](https://github.com/${repo}/issues/${dep.githubNumber})`;
+		}
+		return `\`${sdId}\` (not synced)`;
+	};
+
+	const lines = ["<!-- seeds:deps -->", "### Issue Dependencies"];
+	if (blocks.length > 0) {
+		lines.push(`- **Blocks:** ${blocks.map(resolveLink).join(", ")}`);
+	}
+	if (blockedBy.length > 0) {
+		lines.push(`- **Blocked by:** ${blockedBy.map(resolveLink).join(", ")}`);
+	}
+	lines.push("<!-- /seeds:deps -->");
+	return lines.join("\n");
+}
+
+/**
+ * Parse <!-- seeds:deps --> section from a GitHub issue body.
+ * Returns GitHub issue numbers for blocks/blockedBy.
+ */
+export function parseDepsFromBody(body: string): { blocks: number[]; blockedBy: number[] } {
+	const blocks: number[] = [];
+	const blockedBy: number[] = [];
+
+	const match = body.match(/<!-- seeds:deps -->([\s\S]*?)<!-- \/seeds:deps -->/);
+	if (!match?.[1]) return { blocks, blockedBy };
+
+	const section = match[1];
+	const numberRe = /#(\d+)/g;
+
+	for (const line of section.split("\n")) {
+		if (line.includes("**Blocks:**")) {
+			for (const m of line.matchAll(numberRe)) {
+				if (m[1]) blocks.push(Number(m[1]));
+			}
+		} else if (line.includes("**Blocked by:**")) {
+			for (const m of line.matchAll(numberRe)) {
+				if (m[1]) blockedBy.push(Number(m[1]));
+			}
+		}
+	}
+
+	return { blocks, blockedBy };
 }
 
 /** Create a GitHub issue mirroring a seeds issue. Returns gh issue number or null. */
 export async function ghCreate(
 	issue: Issue,
 	repo: string,
+	allIssues?: Issue[],
 ): Promise<number | null> {
 	try {
-		const body = [
+		const bodyParts = [
 			issue.description || "",
 			"",
 			`_Seeds ID: \`${issue.id}\`_`,
-		].join("\n");
+		];
+
+		// Add dependency section if issue has blocks/blockedBy
+		if (allIssues) {
+			const depsSection = buildDepsSection(issue, allIssues, repo);
+			if (depsSection) {
+				bodyParts.push("", depsSection);
+			}
+		}
+
+		const body = bodyParts.join("\n");
 
 		const args = [
 			"gh", "issue", "create",

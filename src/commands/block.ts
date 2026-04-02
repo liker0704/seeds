@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { findSeedsDir } from "../config.ts";
+import { findSeedsDir, readConfig } from "../config.ts";
 import { accent, muted, outputJson } from "../output.ts";
 import { issuesPath, readIssues, withLock, writeIssues } from "../store.ts";
 
@@ -39,6 +39,37 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		issues[blockerIdx] = { ...blocker, blocks, updatedAt: new Date().toISOString() };
 
 		await writeIssues(dir, issues);
+
+		// GitHub mirror: update both issues with deps section
+		try {
+			const config = await readConfig(dir);
+			if (config.github_enabled) {
+				const { ghUpdate, buildDepsSection, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
+				if (await ghIsAvailable()) {
+					const repo = config.github_repo ?? await detectGitHubRepo(process.cwd());
+					if (repo) {
+						const updatedIssue = issues[issueIdx]!;
+						const updatedBlocker = issues[blockerIdx]!;
+						// Update blocker issue body with new "Blocks" section
+						if (updatedBlocker.githubNumber) {
+							const depsBody = buildDepsSection(updatedBlocker, issues, repo);
+							if (depsBody) {
+								await ghUpdate(updatedBlocker.githubNumber, repo, { description: `${updatedBlocker.description || ""}\n\n${depsBody}` });
+							}
+						}
+						// Update blocked issue body with new "Blocked by" section
+						if (updatedIssue.githubNumber) {
+							const depsBody = buildDepsSection(updatedIssue, issues, repo);
+							if (depsBody) {
+								await ghUpdate(updatedIssue.githubNumber, repo, { description: `${updatedIssue.description || ""}\n\n${depsBody}` });
+							}
+						}
+					}
+				}
+			}
+		} catch {
+			// Non-fatal
+		}
 	});
 
 	if (jsonMode) {

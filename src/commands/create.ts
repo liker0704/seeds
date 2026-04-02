@@ -113,7 +113,8 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 				if (await ghIsAvailable()) {
 					const repo = config.github_repo ?? await detectGitHubRepo(process.cwd());
 					if (repo) {
-						const ghNumber = await ghCreate(issue, repo);
+						const allIssues = await readIssues(dir);
+						const ghNumber = await ghCreate(issue, repo, allIssues);
 						if (ghNumber) {
 							issue.githubNumber = ghNumber;
 							// Re-read and update the issue with githubNumber
