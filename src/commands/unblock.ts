@@ -87,27 +87,21 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		try {
 			const config = await readConfig(dir);
 			if (config.github_enabled) {
-				const { ghUpdate, buildDepsSection, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
+				const { ghUpdate, bodyWithDeps, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
 				if (await ghIsAvailable()) {
 					const repo = config.github_repo ?? (await detectGitHubRepo(process.cwd()));
 					if (repo) {
-						// Update the unblocked issue
 						const updatedIssue = issues.find((i) => i.id === issueId);
 						if (updatedIssue?.githubNumber) {
-							const depsBody = buildDepsSection(updatedIssue, issues, repo);
-							const body = updatedIssue.description || "";
 							await ghUpdate(updatedIssue.githubNumber, repo, {
-								description: depsBody ? `${body}\n\n${depsBody}` : body,
+								description: bodyWithDeps(updatedIssue.description || "", updatedIssue, issues, repo),
 							});
 						}
-						// Update each removed blocker
 						for (const bid of removed) {
 							const blocker = issues.find((i) => i.id === bid);
 							if (blocker?.githubNumber) {
-								const depsBody = buildDepsSection(blocker, issues, repo);
-								const body = blocker.description || "";
 								await ghUpdate(blocker.githubNumber, repo, {
-									description: depsBody ? `${body}\n\n${depsBody}` : body,
+									description: bodyWithDeps(blocker.description || "", blocker, issues, repo),
 								});
 							}
 						}

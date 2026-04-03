@@ -273,6 +273,18 @@ export async function ghListComments(
 	}
 }
 
+/** Strip existing seeds:deps section from a body string. */
+export function stripDepsSection(body: string): string {
+	return body.replace(/\n*<!-- seeds:deps -->[\s\S]*?<!-- \/seeds:deps -->\n*/g, "").trim();
+}
+
+/** Build a full issue body with deps section appended (strips old one first). */
+export function bodyWithDeps(description: string, issue: Issue, allIssues: Issue[], repo: string): string {
+	const clean = stripDepsSection(description);
+	const deps = buildDepsSection(issue, allIssues, repo);
+	return deps ? `${clean}\n\n${deps}` : clean;
+}
+
 /** Reopen a GitHub issue. */
 export async function ghReopen(
 	githubNumber: number,

@@ -120,12 +120,19 @@ async function syncFromGitHub(dir: string, jsonMode: boolean): Promise<{ pulled:
 				const existingGhIds = new Set(
 					(sdIssue.comments ?? []).filter((c) => c.githubId).map((c) => c.githubId),
 				);
+				// Also track existing comment bodies to detect duplicates from sd→gh→sd round-trip
+				const existingBodies = new Set(
+					(sdIssue.comments ?? []).map((c) => c.body),
+				);
 
 				for (const ghComment of ghComments) {
 					if (existingGhIds.has(ghComment.id)) continue;
 
-					// Skip comments that we posted (they start with **author:**)
-					// Only import comments from other users
+					// Skip if body matches an existing local comment (sd posted it → gh → sync back)
+					// Strip **author:** prefix for matching
+					const strippedBody = ghComment.body.replace(/^\*\*[^*]+:\*\*\s*/, "");
+					if (existingBodies.has(ghComment.body) || existingBodies.has(strippedBody)) continue;
+
 					const idx = issues.findIndex((i) => i.id === sdIssue.id);
 					if (idx >= 0) {
 						const existing = issues[idx]!;

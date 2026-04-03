@@ -44,25 +44,21 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		try {
 			const config = await readConfig(dir);
 			if (config.github_enabled) {
-				const { ghUpdate, buildDepsSection, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
+				const { ghUpdate, bodyWithDeps, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
 				if (await ghIsAvailable()) {
 					const repo = config.github_repo ?? await detectGitHubRepo(process.cwd());
 					if (repo) {
-						const updatedIssue = issues[issueIdx]!;
 						const updatedBlocker = issues[blockerIdx]!;
-						// Update blocker issue body with new "Blocks" section
+						const updatedIssue = issues[issueIdx]!;
 						if (updatedBlocker.githubNumber) {
-							const depsBody = buildDepsSection(updatedBlocker, issues, repo);
-							if (depsBody) {
-								await ghUpdate(updatedBlocker.githubNumber, repo, { description: `${updatedBlocker.description || ""}\n\n${depsBody}` });
-							}
+							await ghUpdate(updatedBlocker.githubNumber, repo, {
+								description: bodyWithDeps(updatedBlocker.description || "", updatedBlocker, issues, repo),
+							});
 						}
-						// Update blocked issue body with new "Blocked by" section
 						if (updatedIssue.githubNumber) {
-							const depsBody = buildDepsSection(updatedIssue, issues, repo);
-							if (depsBody) {
-								await ghUpdate(updatedIssue.githubNumber, repo, { description: `${updatedIssue.description || ""}\n\n${depsBody}` });
-							}
+							await ghUpdate(updatedIssue.githubNumber, repo, {
+								description: bodyWithDeps(updatedIssue.description || "", updatedIssue, issues, repo),
+							});
 						}
 					}
 				}

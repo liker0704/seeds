@@ -93,7 +93,7 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 						const code = await proc.exited;
 						if (code === 0) {
 							// Extract comment URL/ID from output
-							const urlMatch = ghOutput.trim().match(/\/comments\/(\d+)/);
+							const urlMatch = ghOutput.trim().match(/issuecomment-(\d+)/);
 							if (urlMatch?.[1]) {
 								comment.githubId = Number(urlMatch[1]);
 								issues[idx] = {
