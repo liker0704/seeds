@@ -1,7 +1,29 @@
 import { Command } from "commander";
-import { findSeedsDir } from "../config.ts";
+import { findSeedsDir, readConfig } from "../config.ts";
 import { accent, muted, outputJson, printSuccess } from "../output.ts";
 import { issuesPath, readIssues, withLock, writeIssues } from "../store.ts";
+
+async function syncLabelsToGh(dir: string, issueId: string, issues: Array<{ id: string; githubNumber?: number }>, addLabels?: string[], removeLabels?: string[]): Promise<void> {
+	try {
+		const config = await readConfig(dir);
+		if (!config.github_enabled) return;
+		const issue = issues.find((i) => i.id === issueId);
+		if (!issue?.githubNumber) return;
+		const { ghIsAvailable, detectGitHubRepo } = await import("../github.ts");
+		if (!(await ghIsAvailable())) return;
+		const repo = config.github_repo ?? (await detectGitHubRepo(process.cwd()));
+		if (!repo) return;
+
+		const args = ["gh", "issue", "edit", String(issue.githubNumber), "--repo", repo];
+		if (addLabels?.length) args.push("--add-label", addLabels.join(","));
+		if (removeLabels?.length) args.push("--remove-label", removeLabels.join(","));
+		if (args.length > 6) {
+			Bun.spawnSync(args, { stdout: "pipe", stderr: "pipe" });
+		}
+	} catch {
+		// Non-fatal
+	}
+}
 
 function normalizeLabels(raw: string[]): string[] {
 	return raw.map((l) => l.trim().toLowerCase()).filter(Boolean);
@@ -83,6 +105,7 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 			const merged = Array.from(new Set([...(issue.labels ?? []), ...newLabels]));
 			issues[idx] = { ...issue, labels: merged, updatedAt: new Date().toISOString() };
 			await writeIssues(dir, issues);
+			await syncLabelsToGh(dir, issueId, issues, newLabels);
 		});
 
 		if (jsonMode) {
@@ -115,6 +138,7 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 			else updated.labels = undefined;
 			issues[idx] = updated;
 			await writeIssues(dir, issues);
+			await syncLabelsToGh(dir, issueId, issues, undefined, [...removeSet]);
 		});
 
 		if (jsonMode) {

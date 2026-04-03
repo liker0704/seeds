@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { findSeedsDir } from "../config.ts";
+import { findSeedsDir, readConfig } from "../config.ts";
 import { outputJson, printSuccess } from "../output.ts";
 import { issuesPath, readIssues, withLock, writeIssues } from "../store.ts";
 import type { Issue } from "../types.ts";
@@ -121,6 +121,28 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		issues[idx] = { ...issue, ...patch };
 		updated = issues[idx];
 		await writeIssues(dir, issues);
+
+		// GitHub sync
+		try {
+			const config = await readConfig(dir);
+			if (config.github_enabled && updated?.githubNumber) {
+				const { ghUpdate, ghIsAvailable, detectGitHubRepo } = await import("../github.ts");
+				if (await ghIsAvailable()) {
+					const repo = config.github_repo ?? (await detectGitHubRepo(process.cwd()));
+					if (repo) {
+						const fields: { title?: string; description?: string; labels?: string[] } = {};
+						if (patch.title) fields.title = patch.title;
+						if (patch.description) fields.description = patch.description;
+						if (patch.labels) fields.labels = patch.labels;
+						if (Object.keys(fields).length > 0) {
+							await ghUpdate(updated.githubNumber, repo, fields);
+						}
+					}
+				}
+			}
+		} catch {
+			// Non-fatal
+		}
 	});
 
 	if (jsonMode) {

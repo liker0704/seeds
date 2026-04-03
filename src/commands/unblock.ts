@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { findSeedsDir } from "../config.ts";
+import { findSeedsDir, readConfig } from "../config.ts";
 import { accent, muted, outputJson } from "../output.ts";
 import { issuesPath, readIssues, withLock, writeIssues } from "../store.ts";
 import type { Issue } from "../types.ts";
@@ -82,6 +82,41 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 		}
 
 		await writeIssues(dir, issues);
+
+		// GitHub sync: update deps sections on affected issues
+		try {
+			const config = await readConfig(dir);
+			if (config.github_enabled) {
+				const { ghUpdate, buildDepsSection, detectGitHubRepo, ghIsAvailable } = await import("../github.ts");
+				if (await ghIsAvailable()) {
+					const repo = config.github_repo ?? (await detectGitHubRepo(process.cwd()));
+					if (repo) {
+						// Update the unblocked issue
+						const updatedIssue = issues.find((i) => i.id === issueId);
+						if (updatedIssue?.githubNumber) {
+							const depsBody = buildDepsSection(updatedIssue, issues, repo);
+							const body = updatedIssue.description || "";
+							await ghUpdate(updatedIssue.githubNumber, repo, {
+								description: depsBody ? `${body}\n\n${depsBody}` : body,
+							});
+						}
+						// Update each removed blocker
+						for (const bid of removed) {
+							const blocker = issues.find((i) => i.id === bid);
+							if (blocker?.githubNumber) {
+								const depsBody = buildDepsSection(blocker, issues, repo);
+								const body = blocker.description || "";
+								await ghUpdate(blocker.githubNumber, repo, {
+									description: depsBody ? `${body}\n\n${depsBody}` : body,
+								});
+							}
+						}
+					}
+				}
+			}
+		} catch {
+			// Non-fatal
+		}
 	});
 
 	if (jsonMode) {
