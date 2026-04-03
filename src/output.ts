@@ -56,7 +56,8 @@ export function printIssueFull(issue: Issue): void {
 		issue.status === "closed" ? muted : issue.status === "in_progress" ? chalk.cyan : brand;
 	const priorityLabel = PRIORITY_LABELS[issue.priority] ?? String(issue.priority);
 
-	console.log(`${accent.bold(issue.id)}  ${statusColor(issue.status)}`);
+	const ghTag = issue.githubNumber ? `  ${muted(`gh #${issue.githubNumber}`)}` : "";
+	console.log(`${accent.bold(issue.id)}${ghTag}  ${statusColor(issue.status)}`);
 	console.log(`Title:    ${issue.title}`);
 	console.log(`Type:     ${muted(issue.type)}   Priority: ${muted(priorityLabel)}`);
 	if (issue.assignee) console.log(`Assignee: ${issue.assignee}`);

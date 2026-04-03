@@ -10,8 +10,18 @@ export async function run(args: string[], seedsDir?: string): Promise<void> {
 
 	const dir = seedsDir ?? (await findSeedsDir());
 	const issues = await readIssues(dir);
-	const issue = issues.find((i) => i.id === id);
-	if (!issue) throw new Error(`Issue not found: ${id}`);
+
+	// Support lookup by GitHub number: #123 or gh:123
+	let issue;
+	const ghMatch = id.match(/^#?(\d+)$|^gh:(\d+)$/);
+	if (ghMatch) {
+		const ghNumber = Number(ghMatch[1] ?? ghMatch[2]);
+		issue = issues.find((i) => i.githubNumber === ghNumber);
+		if (!issue) throw new Error(`No issue linked to GitHub #${ghNumber}`);
+	} else {
+		issue = issues.find((i) => i.id === id);
+		if (!issue) throw new Error(`Issue not found: ${id}`);
+	}
 
 	if (jsonMode) {
 		outputJson({ success: true, command: "show", issue });
